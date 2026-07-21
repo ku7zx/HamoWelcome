@@ -1,49 +1,54 @@
-name: Build HamoWelcome Dylib
+name: Build HAMO.dylib
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-latest
-    env:
-      THEOS: /home/runner/theos
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Theos
-        run: |
-          git clone --recursive \
-            https://github.com/theos/theos.git \
-            /home/runner/theos
-
-      - name: Download iOS SDK
-        run: |
-          curl -fL \
-            https://github.com/theos/sdks/releases/download/0100/iPhoneOS16.2.sdk.tar.xz \
-            | tar xJf - -C /home/runner/theos/sdks/
-
-      - name: Install build tools
-        run: brew install dpkg ldid --quiet
 
       - name: Extract project
         run: unzip HamoWelcome.zip
 
-      - name: Build dylib
+      - name: Get Logos preprocessor
         run: |
-          cd HamoWelcome
-          make FINALPACKAGE=1
+          curl -fsSL \
+            "https://raw.githubusercontent.com/theos/theos/master/bin/logos.pl" \
+            -o logos.pl
 
-      - name: Package deb
+      - name: Preprocess Logos syntax
         run: |
-          cd HamoWelcome
-          make package FINALPACKAGE=1
+          perl logos.pl \
+            HamoWelcome/Source/HamoWelcome.x \
+            > HamoWelcome/Source/HamoWelcome_processed.m
 
-      - name: Upload result
+      - name: Compile HAMO.dylib
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          clang \
+            -arch arm64 \
+            -isysroot "$SDK" \
+            -mios-version-min=15.0 \
+            -dynamiclib \
+            -framework UIKit \
+            -framework Foundation \
+            -fobjc-arc \
+            -I HamoWelcome/Headers \
+            -o HAMO.dylib \
+            HamoWelcome/Source/HamoWelcome_processed.m \
+            HamoWelcome/Source/HamoWelcomeController.m
+
+      - name: Sign dylib
+        run: |
+          brew install ldid --quiet
+          ldid -S HAMO.dylib
+
+      - name: Upload HAMO.dylib
         uses: actions/upload-artifact@v4
         with:
           name: HAMO-dylib
-          path: HamoWelcome/packages/
+          path: HAMO.dylib
           retention-days: 30
