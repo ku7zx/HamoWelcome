@@ -1,0 +1,41 @@
+name: Build HamoWelcome Dylib
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Theos
+        run: |
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)" || true
+          echo "THEOS=/opt/theos" >> $GITHUB_ENV
+      - name: Install SDK
+        run: |
+          curl -LO https://github.com/theos/sdks/releases/download/0100/iPhoneOS16.2.sdk.tar.xz
+          sudo mkdir -p /opt/theos/sdks
+          sudo tar -xf iPhoneOS16.2.sdk.tar.xz -C /opt/theos/sdks/
+      - name: Install tools
+        run: brew install ldid dpkg
+      - name: Extract project
+        run: |
+          unzip HamoWelcome.zip -d extracted/
+      - name: Build
+        run: |
+          export THEOS=/opt/theos
+          cd extracted/HamoWelcome
+          make FINALPACKAGE=1
+          make package FINALPACKAGE=1
+      - name: Collect output
+        run: |
+          mkdir -p output
+          find extracted/HamoWelcome/.theos -name "*.dylib" -exec cp {} output/HAMO.dylib \; 2>/dev/null || true
+          find extracted/HamoWelcome/packages -name "*.deb" -exec cp {} output/ \; 2>/dev/null || true
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: HAMO-dylib
+          path: output/
+          retention-days: 30
