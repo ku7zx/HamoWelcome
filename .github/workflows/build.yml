@@ -10,12 +10,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Extract project
         run: unzip *.zip
-      - name: Get Logos
-        run: curl -fsSL "https://raw.githubusercontent.com/theos/theos/master/bin/logos.pl" -o logos.pl
-      - name: Preprocess
-        run: perl logos.pl HamoWelcome/Source/HamoWelcome.x > HamoWelcome/Source/processed.m
       - name: Compile HAMO.dylib
-        run: clang -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path) -mios-version-min=15.0 -dynamiclib -framework UIKit -framework Foundation -fobjc-arc -I HamoWelcome/Headers -o HAMO.dylib HamoWelcome/Source/processed.m HamoWelcome/Source/HamoWelcomeController.m
+        run: clang -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path) -mios-version-min=15.0 -dynamiclib -framework UIKit -framework Foundation -fobjc-arc -I HamoWelcome/Headers -o HAMO.dylib HamoWelcome/Source/HamoWelcome.m HamoWelcome/Source/HamoWelcomeController.m
       - name: Sign
         run: brew install ldid --quiet && ldid -S HAMO.dylib
       - name: Upload HAMO.dylib
