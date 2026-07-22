@@ -3,49 +3,21 @@ on:
   push:
     branches: [main, master]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Extract project
         run: unzip *.zip
-
-      - name: Get Logos preprocessor
-        run: |
-          curl -fsSL \
-            "https://raw.githubusercontent.com/theos/theos/master/bin/logos.pl" \
-            -o logos.pl
-
-      - name: Preprocess Logos syntax
-        run: |
-          perl logos.pl \
-            HamoWelcome/Source/HamoWelcome.x \
-            > HamoWelcome/Source/HamoWelcome_processed.m
-
+      - name: Get Logos
+        run: curl -fsSL "https://raw.githubusercontent.com/theos/theos/master/bin/logos.pl" -o logos.pl
+      - name: Preprocess
+        run: perl logos.pl HamoWelcome/Source/HamoWelcome.x > HamoWelcome/Source/processed.m
       - name: Compile HAMO.dylib
-        run: |
-          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-          clang \
-            -arch arm64 \
-            -isysroot "$SDK" \
-            -mios-version-min=15.0 \
-            -dynamiclib \
-            -framework UIKit \
-            -framework Foundation \
-            -fobjc-arc \
-            -I HamoWelcome/Headers \
-            -o HAMO.dylib \
-            HamoWelcome/Source/HamoWelcome_processed.m \
-            HamoWelcome/Source/HamoWelcomeController.m
-
-      - name: Sign dylib
-        run: |
-          brew install ldid --quiet
-          ldid -S HAMO.dylib
-
+        run: clang -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path) -mios-version-min=15.0 -dynamiclib -framework UIKit -framework Foundation -fobjc-arc -I HamoWelcome/Headers -o HAMO.dylib HamoWelcome/Source/processed.m HamoWelcome/Source/HamoWelcomeController.m
+      - name: Sign
+        run: brew install ldid --quiet && ldid -S HAMO.dylib
       - name: Upload HAMO.dylib
         uses: actions/upload-artifact@v4
         with:
