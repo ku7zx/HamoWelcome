@@ -10,8 +10,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Extract project
         run: unzip *.zip
+      - name: List files
+        run: find . -name "*.m" -o -name "*.x" | grep -i hamo
       - name: Compile HAMO.dylib
-        run: clang -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path) -mios-version-min=15.0 -dynamiclib -framework UIKit -framework Foundation -fobjc-arc -I HamoWelcome/Headers -o HAMO.dylib HamoWelcome/Source/HamoWelcome.m HamoWelcome/Source/HamoWelcomeController.m
+        run: SRC=$(find . -name "HamoWelcome.m" | head -1) && CTR=$(find . -name "HamoWelcomeController.m" | head -1) && HDR=$(find . -name "HamoWelcomeController.h" | head -1 | xargs dirname) && SDK=$(xcrun --sdk iphoneos --show-sdk-path) && clang -arch arm64 -isysroot "$SDK" -mios-version-min=15.0 -dynamiclib -framework UIKit -framework Foundation -fobjc-arc -I "$HDR" -o HAMO.dylib "$SRC" "$CTR"
       - name: Sign
         run: brew install ldid --quiet && ldid -S HAMO.dylib
       - name: Upload HAMO.dylib
